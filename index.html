@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Quill task test</title>
+  <script src="http://cdn.quilljs.com/1.1.9/quill.min.js"></script>
+  <link href="http://cdn.quilljs.com/1.1.9/quill.snow.css" rel="stylesheet">
+</head>
+<body>
+  <div id='editor-holder'>
+    <div id='editor'>
+      <ul class="task-list">
+        <li>
+          Test item 1
+        </li>
+        <li class="checked-true">
+          Test item 2
+        </li>
+        <li>
+          Test item 3
+        </li>
+      </ul>
+    </div>
+  </div>
+  <style type="text/css"> 
+    .ql-editor ul.task-list > li {
+      pointer-events: none;
+    }
+
+    .ql-editor ul.task-list > li::before {
+      color: black;
+      border: 1px solid black;
+      content: " ";
+      font-size: 15px;
+      height: 15px;
+      line-height: 1;
+      position: absolute;
+      text-align: center;
+      vertical-align: middle;
+      width: 15px;
+      cursor: default;
+      pointer-events: all;
+    }
+
+    .ql-editor ul.task-list > li.checked-true {
+      text-decoration: line-through;
+    }
+
+    .ql-editor ul.task-list > li.checked-true::before {
+      content: "✓";
+    }
+  </style>
+  <script type="text/javascript">
+    //BSD-3 Clause license
+    //forked from https://github.com/koffeinfrei/quill-task-list
+    /* Begin task list module */
+    const List = Quill.import('formats/list');
+    const ListItem = Quill.import('formats/list/item');
+    const Parchment = Quill.import('parchment');
+    const Module = Quill.import('core/module');
+    const Delta = Quill.import('delta');
+
+    //create and register a new class Attributor for checked tasks
+    let checkedAttributor = new Parchment.Attributor.Class('checked', 'checked');
+    Quill.register(checkedAttributor);
+
+    class TaskListItem extends ListItem {
+      format(name, value) {
+        if (name === TaskList.blotName && !value) {
+          this.replaceWith(Parchment.create(this.statics.scope));
+        }
+        else {
+          super.format(name, value);
+        }
+      }
+
+      // when inserting a new list item, remove the 'checked' css class
+      clone() {
+        const clone = super.clone();
+        checkedAttributor.remove(clone.domNode);
+        return clone;
+      }
+    }
+
+    TaskListItem.blotName = 'task-list-item';
+    TaskListItem.tagName = 'LI';
+
+    class TaskList extends List {
+      static create(value) {
+        return super.create('bullet');
+      }
+
+      static formats(domNode) {
+        return 'bullet';
+      }
+    }
+
+    TaskList.blotName = 'task-list';
+    TaskList.tagName = 'UL';
+    TaskList.className = 'task-list';
+    TaskList.defaultChild = 'task-list-item';
+    TaskList.allowedChildren = [TaskListItem];
+
+    class TaskListModule extends Module {
+      constructor(quill, options) {
+        super(quill, options);
+
+        this.quill.container.addEventListener('click', (e) => {
+          if (e.target.matches('ul.task-list > li')) {
+            if (checkedAttributor.value(e.target)) {
+              checkedAttributor.remove(e.target);
+            }
+            else {
+              checkedAttributor.add(e.target, true);
+            }
+          }
+        });
+      }
+    }
+
+    Quill.register({
+      'formats/task-list': TaskList,
+      'formats/task-list/item': TaskListItem,
+      'modules/task-list': TaskListModule
+    });
+
+    // https://github.com/quilljs/quill/blob/develop/assets/icons/list-check.svg
+    Quill.import('ui/icons')['task-list'] = `
+      <svg class="" viewbox="0 0 18 18">
+        <line class="ql-stroke" x1="9" x2="15" y1="4" y2="4"></line>
+        <polyline class="ql-stroke" points="3 4 4 5 6 3"></polyline>
+        <line class="ql-stroke" x1="9" x2="15" y1="14" y2="14"></line>
+        <polyline class="ql-stroke" points="3 14 4 15 6 13"></polyline>
+        <line class="ql-stroke" x1="9" x2="15" y1="9" y2="9"></line>
+        <polyline class="ql-stroke" points="3 9 4 10 6 8"></polyline>
+      </svg>
+    `;
+    /* End task list module */
+    
+    /* Begin normal Quill editor creation */
+      var toolbarOptions = [
+      [{ 'font': [] }],
+
+      [{ 'size': ['small', false, 'large', 'huge'] }],  
+
+      ['bold', 'italic', 'underline', 'strike'],        
+      ['blockquote', 'code-block'],
+
+      [{ 'list': 'ordered'}, { 'list': 'bullet' }], [ 'task-list' ],
+      [{ 'indent': '-1'}, { 'indent': '+1' }],
+      [ 'link', 'image', 'video', 'formula' ],  
+
+
+      [{ 'color': [] }, { 'background': [] }],
+      [{ 'align': [] }],
+
+      ['clean']
+    ];
+
+    var options = {
+      modules: {
+        toolbar: toolbarOptions,
+        'task-list': true
+      },
+      theme: 'snow'
+    }
+
+    quillEditor = new Quill('#editor', options);
+    /* End normal Quill editor creation */
+  </script>
+</body>
+</html>
